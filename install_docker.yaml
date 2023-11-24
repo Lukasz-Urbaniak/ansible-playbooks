@@ -1,0 +1,36 @@
+---
+- hosts: "{{ host }}"
+  become: yes
+  vars_prompt:
+    - name: "ansible_become_password"
+      prompt: "Enter sudo password"
+      private: yes
+  tasks:
+    - name: Update apt package index
+      apt: update_cache=yes force_apt_get=yes
+    - name: Install packages to allow apt to use a repository over HTTPS
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+    - name: Add Docker's official GPG key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    - name: Verify the key with the fingerprint
+      shell: apt-key fingerprint 0EBFCD88
+    - name: Setup stable repository
+      shell: echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - name: Update the apt package index (again)
+      apt: update_cache=yes force_apt_get=yes
+    - name: Install Docker engine
+      apt:
+        name: docker-ce
+        state: present
+    - name: Add user to docker group
+      user:
+        name: "{{user}}"
+        group: docker
+        append: yes
